@@ -31,7 +31,7 @@
     --road-tr: #f7dca8; --road-tr-case: #d8b06a;
     --road-pr: #ffffff; --road-pr-case: #d5d0c3;
     --label: #5d666c; --label-strong: #20272b; --halo: #f0ede5;
-    --mini: #2a78d6; --market: #1baf7a; --super: #eb6834; --ring: #ffffff;
+    --mini: #2a78d6; --market: #1baf7a; --super: #eb6834; --ring: #ffffff; --me: #1a73e8;
     --ok: #1c6a2a; --ok-bg: #e3f2e4; --warn: #9d3417; --warn-bg: #fbe8e0;
     --shadow: 0 2px 10px rgba(16, 24, 28, .14);
     --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -48,7 +48,7 @@
       --road-tr: #6c5b3c; --road-tr-case: #463a27;
       --road-pr: #39444a; --road-pr-case: #2a3237;
       --label: #8b979d; --label-strong: #d4dcdf; --halo: #212a2e;
-      --mini: #3987e5; --market: #199e70; --super: #d95926; --ring: #0f1417;
+      --mini: #3987e5; --market: #199e70; --super: #d95926; --ring: #0f1417; --me: #4c8df6;
       --ok: #7fd08a; --ok-bg: #173320; --warn: #f19a7a; --warn-bg: #3a1d14;
       --shadow: 0 2px 12px rgba(0, 0, 0, .45);
       color-scheme: dark;
@@ -64,7 +64,7 @@
     --road-tr: #6c5b3c; --road-tr-case: #463a27;
     --road-pr: #39444a; --road-pr-case: #2a3237;
     --label: #8b979d; --label-strong: #d4dcdf; --halo: #212a2e;
-    --mini: #3987e5; --market: #199e70; --super: #d95926; --ring: #0f1417;
+    --mini: #3987e5; --market: #199e70; --super: #d95926; --ring: #0f1417; --me: #4c8df6;
     --ok: #7fd08a; --ok-bg: #173320; --warn: #f19a7a; --warn-bg: #3a1d14;
     --shadow: 0 2px 12px rgba(0, 0, 0, .45);
     color-scheme: dark;
@@ -105,6 +105,12 @@
   .leaflet-tooltip-right { margin-left: 8px; }
   .leaflet-tooltip .tsub { display: block; font-weight: 500; opacity: .75; font-size: 11.5px; }
   .origin-tip { background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); }
+  .nearest-tip { background: var(--ink); color: var(--panel); font-weight: 800; }
+  .mbtn[aria-pressed="true"] { color: var(--me); }
+  .lblrow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .uselocation { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 5px; padding: 0; border: 0; background: none;
+                 color: var(--accent); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .uselocation svg { width: 14px; height: 14px; }
 
   /* ---- App frame ---- */
   .app { height: 100%; display: grid; grid-template-columns: minmax(340px, 384px) 1fr; }
@@ -256,7 +262,13 @@
         <div class="seg" id="emSeg" role="group" aria-label="Emirate"></div>
         <div class="chips" id="chips" role="group" aria-label="Store format"></div>
         <div class="near" id="nearBox">
-          <label class="lbl" for="near">Sort by distance from</label>
+          <div class="lblrow">
+            <label class="lbl" for="near">Sort by distance from</label>
+            <button class="uselocation" id="useLoc" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+              Use my location
+            </button>
+          </div>
           <div class="field">
             <input id="near" type="text" placeholder="Loading areas…" disabled autocomplete="off"
                    role="combobox" aria-expanded="false" aria-controls="nearList" aria-autocomplete="list">
@@ -285,6 +297,9 @@
   <div class="mapwrap">
     <div id="map" role="application" aria-label="Map of allday stores"></div>
     <div class="mapbtns">
+      <button class="mbtn" id="locBtn" type="button" title="Show my location and the nearest store" aria-label="Show my location and the nearest store" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg>
+      </button>
       <button class="mbtn" id="fitBtn" type="button" title="Show all listed stores" aria-label="Show all listed stores">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
@@ -412,7 +427,7 @@
     const g = n => cs.getPropertyValue(n).trim();
     C = { land: g('--land'), mask: g('--mask'), edge: g('--line-strong'), ink: g('--ink'), ring: g('--ring'), panel: g('--panel'),
           mw: g('--road-mw'), mwCase: g('--road-mw-case'), tr: g('--road-tr'), trCase: g('--road-tr-case'),
-          pr: g('--road-pr'), prCase: g('--road-pr-case'), m: g('--mini'), k: g('--market'), s: g('--super') };
+          pr: g('--road-pr'), prCase: g('--road-pr-case'), m: g('--mini'), k: g('--market'), s: g('--super'), me: g('--me') };
   }
   readTheme();
 
@@ -472,7 +487,7 @@
     }
     roadStyle();
     styleMarkers();
-    if (originMarker) originMarker.setStyle({ fillColor: C.ink, color: C.ring });
+    if (state.origin) { drawOrigin(); updateNearest(); }
   }
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {}
   new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -722,6 +737,7 @@
       rb.addEventListener('click', resetFilters);
       sum.append(rb);
     }
+    updateNearest();
   }
 
   function resetFilters() {
@@ -760,7 +776,7 @@
     }
     if (s.flag === '24h') facts.append(el('span', 'badge', 'Open 24 hours'));
     if (s.flag === 'closed') facts.append(el('span', 'badge warn', 'Temporarily closed'));
-    if (state.origin) facts.append(el('span', null, fmtDist(km(state.origin, s)) + ' from ' + state.origin.name));
+    if (state.origin) facts.append(el('span', null, fmtDist(km(state.origin, s)) + ' from ' + (state.origin.me ? 'you' : state.origin.name)));
 
     const actions = el('div', 'actions');
     const dir = el('a', 'btn primary', 'Directions'); dir.href = dirUrl(s); dir.target = '_blank'; dir.rel = 'noopener';
@@ -860,15 +876,80 @@
     [...nearList.children].forEach((li, i) => li.setAttribute('aria-selected', i === nearIdx));
     nearInput.setAttribute('aria-activedescendant', nearIdx >= 0 ? 'near-opt-' + nearIdx : '');
   }
-  function setOrigin(o, fit) {
-    state.origin = o;
+  /* ---------------- your location & nearest store ---------------- */
+  let accCircle = null, watchId = null, firstFix = false, flashT = 0;
+  const nearestLayer = L.layerGroup().addTo(map);
+  function flash(msg, ms = 5000) {
+    const m = $('#mstatus'); m.textContent = msg; m.hidden = false;
+    clearTimeout(flashT); if (ms) flashT = setTimeout(() => { m.hidden = true; }, ms);
+  }
+  function nearestTo(o) {
+    let cand = visible().filter(s => s.flag !== 'closed');
+    if (!cand.length) cand = STORES.filter(s => s.flag !== 'closed');
+    return cand.reduce((a, b) => (km(o, a) <= km(o, b) ? a : b));
+  }
+  function drawOrigin() {
     if (originMarker) { originMarker.remove(); originMarker = null; }
-    if (o) {
+    if (accCircle) { accCircle.remove(); accCircle = null; }
+    const o = state.origin;
+    if (!o) return;
+    if (o.me) {
+      if (o.acc) accCircle = L.circle([o.lat, o.lng], { renderer: originR, pane: 'origin', radius: Math.min(o.acc, 3000), stroke: false, fillColor: C.me, fillOpacity: 0.14, interactive: false }).addTo(map);
+      originMarker = L.circleMarker([o.lat, o.lng], { renderer: originR, pane: 'origin', radius: 8, weight: 3, color: '#ffffff', fillColor: C.me, fillOpacity: 1, interactive: false }).addTo(map);
+    } else {
       originMarker = L.circleMarker([o.lat, o.lng], { renderer: originR, pane: 'origin', radius: 7, weight: 3, color: C.ring, fillColor: C.ink, fillOpacity: 1, interactive: false })
         .bindTooltip(esc(o.name), { permanent: true, direction: 'right', offset: [8, 0], className: 'origin-tip' }).addTo(map);
+    }
+  }
+  function updateNearest() {
+    nearestLayer.clearLayers();
+    const o = state.origin;
+    if (!o) return;
+    const n = nearestTo(o), d = km(o, n);
+    L.polyline([[o.lat, o.lng], [n.lat, n.lng]], { renderer: originR, pane: 'origin', color: o.me ? C.me : C.ink, weight: 2.5, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(nearestLayer);
+    L.circleMarker([n.lat, n.lng], { renderer: originR, pane: 'origin', radius: 15, weight: 3, color: o.me ? C.me : C.ink, fill: false, interactive: false })
+      .bindTooltip('Nearest allday · ' + esc(fmtDist(d)), { permanent: true, direction: 'top', offset: [0, -15], className: 'nearest-tip' })
+      .addTo(nearestLayer);
+    if (originMarker) originMarker.bringToFront();
+  }
+  function stopWatch() {
+    if (watchId != null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    $('#locBtn').setAttribute('aria-pressed', 'false');
+  }
+  function locate() {
+    if (!('geolocation' in navigator)) { flash('Location isn’t available in this browser. Pick an area instead.'); return; }
+    if (watchId != null && state.origin && state.origin.me) { setOrigin(state.origin, true); return; }
+    stopWatch();
+    flash('Finding your location…', 0);
+    firstFix = true;
+    $('#locBtn').setAttribute('aria-pressed', 'true');
+    watchId = navigator.geolocation.watchPosition(pos => {
+      const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+      const prev = state.origin && state.origin.me ? state.origin : null;
+      if (prev && !firstFix && km(prev, { lat, lng }) < 0.015) return;
+      const o = { name: 'Your location', lat, lng, acc: accuracy, me: true };
+      const fit = firstFix;
+      firstFix = false;
+      if (fit) {
+        $('#mstatus').hidden = true;
+        if (state.sel) { state.sel = null; showView('list'); setHash(''); }
+        if (isSheet()) setSheet('peek');
+      }
+      setOrigin(o, fit);
+    }, err => {
+      stopWatch();
+      flash(err.code === 1 ? 'Location access is blocked. Allow it for this site in your browser settings, then try again.'
+                           : 'Couldn’t get your location. Try again, or pick an area instead.', 8000);
+    }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
+  }
+
+  function setOrigin(o, fit) {
+    state.origin = o;
+    drawOrigin();
+    if (o) {
       nearInput.value = o.name; nearClear.hidden = false;
       state.sort = 'dist';
-      store.set('allday-map-origin', JSON.stringify(o));
+      if (!o.me) store.set('allday-map-origin', JSON.stringify(o));
     } else {
       nearInput.value = ''; nearClear.hidden = true;
       if (state.sort === 'dist') state.sort = 'name';
@@ -877,11 +958,18 @@
     render();
     updateLabels();
     if (o && fit) {
-      const near3 = visible().slice().sort((a, b) => a.dist - b.dist).slice(0, 3);
-      fitPoints([[o.lat, o.lng], ...near3.map(s => [s.lat, s.lng])], true, 15);
+      const n = nearestTo(o), d = km(o, n);
+      if (o.me && d > 150) {
+        flash('You’re ' + fmtDist(d) + ' from the nearest allday store (' + n.loc + ').', 8000);
+        fitPoints([[n.lat, n.lng]], true, 12);
+      } else {
+        const near = visible().slice().sort((a, b) => a.dist - b.dist).slice(0, o.me ? 1 : 3);
+        fitPoints([[o.lat, o.lng], ...near.map(s => [s.lat, s.lng])], true, 16);
+      }
     }
   }
   function pickNear(p) {
+    stopWatch();
     closeNear();
     nearInput.blur();
     if (state.sel) { state.sel = null; showView('list'); setHash(''); }
@@ -898,7 +986,9 @@
     else if (e.key === 'Enter') { const p = nearOpts[nearIdx >= 0 ? nearIdx : 0]; if (p) pickNear(p); e.preventDefault(); }
     else if (e.key === 'Escape') { closeNear(); e.preventDefault(); }
   });
-  nearClear.addEventListener('click', () => { setOrigin(null); nearInput.focus(); });
+  nearClear.addEventListener('click', () => { stopWatch(); setOrigin(null); nearInput.focus(); });
+  $('#locBtn').addEventListener('click', locate);
+  $('#useLoc').addEventListener('click', () => { nearInput.blur(); locate(); });
 
   /* ---------------- buttons, resize ---------------- */
   $('#fitBtn').addEventListener('click', () => {
