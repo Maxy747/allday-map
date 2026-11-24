@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Unofficial map of allday store locations in Dubai, Abu Dhabi and Sharjah.">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a1d" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="allday map">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>allday Store Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  /* Layout: map-first app. Wide screens: store panel on the left, map fills the rest.
+     Phones: full-screen map with a draggable bottom sheet holding the same panel. */
+  :root {
+    --ink: #13191c; --ink-2: #44505a; --muted: #6a757d;
+    --panel: #ffffff; --panel-2: #f2f4f5; --hover: #f5f8f9;
+    --line: #e3e7e9; --line-strong: #cfd6da;
+    --accent: #0b6e82; --focus: rgba(11, 110, 130, .22);
+    --sea: #b8d5e3; --land: #f0ede5; --mask: #e7ebed;
+    --road-mw: #f3c66f; --road-mw-case: #d09a3b;
+    --road-tr: #f7dca8; --road-tr-case: #d8b06a;
+    --road-pr: #ffffff; --road-pr-case: #d5d0c3;
+    --label: #5d666c; --label-strong: #20272b; --halo: #f0ede5;
+    --mini: #2a78d6; --market: #1baf7a; --super: #eb6834; --ring: #ffffff;
+    --ok: #1c6a2a; --ok-bg: #e3f2e4; --warn: #9d3417; --warn-bg: #fbe8e0;
+    --shadow: 0 2px 10px rgba(16, 24, 28, .14);
+    --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e7ecee; --ink-2: #b6c0c6; --muted: #8e999f;
+      --panel: #151a1d; --panel-2: #1c2226; --hover: #1d2428;
+      --line: #273035; --line-strong: #364047;
+      --accent: #4fb3c8; --focus: rgba(79, 179, 200, .28);
+      --sea: #0d1a21; --land: #212a2e; --mask: #111619;
+      --road-mw: #8c6c35; --road-mw-case: #5c4722;
+      --road-tr: #6c5b3c; --road-tr-case: #463a27;
+      --road-pr: #39444a; --road-pr-case: #2a3237;
+      --label: #8b979d; --label-strong: #d4dcdf; --halo: #212a2e;
+      --mini: #3987e5; --market: #199e70; --super: #d95926; --ring: #0f1417;
+      --ok: #7fd08a; --ok-bg: #173320; --warn: #f19a7a; --warn-bg: #3a1d14;
+      --shadow: 0 2px 12px rgba(0, 0, 0, .45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e7ecee; --ink-2: #b6c0c6; --muted: #8e999f;
+    --panel: #151a1d; --panel-2: #1c2226; --hover: #1d2428;
+    --line: #273035; --line-strong: #364047;
+    --accent: #4fb3c8; --focus: rgba(79, 179, 200, .28);
+    --sea: #0d1a21; --land: #212a2e; --mask: #111619;
+    --road-mw: #8c6c35; --road-mw-case: #5c4722;
+    --road-tr: #6c5b3c; --road-tr-case: #463a27;
+    --road-pr: #39444a; --road-pr-case: #2a3237;
+    --label: #8b979d; --label-strong: #d4dcdf; --halo: #212a2e;
+    --mini: #3987e5; --market: #199e70; --super: #d95926; --ring: #0f1417;
+    --ok: #7fd08a; --ok-bg: #173320; --warn: #f19a7a; --warn-bg: #3a1d14;
+    --shadow: 0 2px 12px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { height: 100%; box-sizing: border-box; }
+  body { height: 100%; margin: 0; overflow: hidden; background: var(--panel); color: var(--ink);
+         font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- Leaflet essentials (the library's stylesheet cannot be loaded here) ---- */
+  .leaflet-pane, .leaflet-marker-icon, .leaflet-pane > svg, .leaflet-pane > canvas, .leaflet-layer { position: absolute; left: 0; top: 0; }
+  .leaflet-container { overflow: hidden; -webkit-tap-highlight-color: transparent; outline: none; }
+  .leaflet-container.leaflet-touch-zoom { touch-action: pan-x pan-y; }
+  .leaflet-container.leaflet-touch-drag { touch-action: pinch-zoom; }
+  .leaflet-container.leaflet-touch-drag.leaflet-touch-zoom { touch-action: none; }
+  .leaflet-marker-icon { display: block; user-select: none; pointer-events: none; }
+  .leaflet-pane { z-index: 400; }
+  .leaflet-overlay-pane { z-index: 400; }
+  .leaflet-marker-pane { z-index: 600; }
+  .leaflet-tooltip-pane { z-index: 650; }
+  .leaflet-popup-pane { z-index: 700; }
+  .leaflet-zoom-animated { transform-origin: 0 0; }
+  .leaflet-zoom-anim .leaflet-zoom-animated { transition: transform .25s cubic-bezier(0, 0, .25, 1); }
+  .leaflet-zoom-anim .leaflet-zoom-hide { visibility: hidden; }
+  .leaflet-interactive { cursor: pointer; }
+  .leaflet-grab { cursor: grab; }
+  .leaflet-dragging .leaflet-grab, .leaflet-dragging .leaflet-interactive { cursor: grabbing; }
+  .leaflet-top, .leaflet-bottom { position: absolute; z-index: 1000; pointer-events: none; }
+  .leaflet-tooltip { position: absolute; padding: 5px 9px; background: var(--ink); color: var(--panel); border-radius: 7px;
+                     font: 600 12.5px/1.3 var(--font); white-space: nowrap; pointer-events: none; box-shadow: var(--shadow); }
+  .leaflet-tooltip-top { margin-top: -6px; }
+  .leaflet-tooltip-top::before { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px;
+                                 border: 5px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
+  .leaflet-tooltip-right { margin-left: 8px; }
+  .leaflet-tooltip .tsub { display: block; font-weight: 500; opacity: .75; font-size: 11.5px; }
+  .origin-tip { background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); }
+
+  /* ---- App frame ---- */
+  .app { height: 100%; display: grid; grid-template-columns: minmax(340px, 384px) 1fr; }
+  .panel { position: relative; z-index: 2; display: flex; flex-direction: column; min-height: 0; min-width: 0;
+           background: var(--panel); border-right: 1px solid var(--line); }
+  .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; }
+  .grab { display: none; }
+  .top { padding-block: 18px 10px; }
+  .title { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.025em; text-wrap: balance; }
+  .meta { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+  .controls { display: grid; gap: 10px; padding-block: 4px 12px; border-bottom: 1px solid var(--line); }
+  .field { position: relative; }
+  .field input { width: 100%; height: 42px; padding: 0 40px 0 12px; border: 1px solid var(--line-strong);
+                 border-radius: 10px; background: var(--panel-2); outline: none; font-size: 15px; }
+  .field input::placeholder { color: var(--muted); }
+  .field input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
+  .field .x { position: absolute; right: 5px; top: 5px; width: 32px; height: 32px; border: 0; border-radius: 8px;
+              background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+  .field .x:hover { background: var(--hover); color: var(--ink); }
+  .lbl { display: block; margin-bottom: 5px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .seg { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2);
+         overflow-x: auto; scrollbar-width: none; }
+  .seg::-webkit-scrollbar { display: none; }
+  .seg button { flex: 1 0 auto; padding: 6px 10px; border: 0; border-radius: 7px; background: none; cursor: pointer;
+                font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+  .seg .n { margin-left: 4px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border: 1px solid var(--line-strong);
+          border-radius: 999px; background: var(--panel); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .chip:hover { background: var(--hover); }
+  .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .chip .n { font-weight: 500; opacity: .7; font-variant-numeric: tabular-nums; }
+  .dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px var(--panel); }
+  .chip[aria-pressed="true"] .dot { box-shadow: 0 0 0 2px var(--ink); }
+  .near { position: relative; }
+  .suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; margin: 0; padding: 4px; list-style: none;
+             background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow); }
+  .suggest li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 7px; cursor: pointer; }
+  .suggest li[aria-selected="true"], .suggest li:hover { background: var(--hover); }
+  .suggest .k { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .sortrow { display: flex; align-items: center; gap: 10px; }
+  .sortrow .lbl { margin: 0; }
+  .sortrow .seg { flex: 1; }
+
+  .summary { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-block: 9px; font-size: 12.5px; color: var(--muted);
+             border-bottom: 1px solid var(--line); }
+  .summary button { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 700; cursor: pointer; text-align: right; }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .list { margin: 0; padding: 0; list-style: none; }
+  .grp { position: sticky; top: 0; z-index: 1; padding: 8px 16px 6px max(16px, env(safe-area-inset-left, 0px)); background: var(--panel);
+         border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .item { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%;
+          padding: 10px 16px 10px max(16px, env(safe-area-inset-left, 0px)); border: 0; border-bottom: 1px solid var(--line);
+          background: none; text-align: left; cursor: pointer; }
+  .item:hover { background: var(--hover); }
+  .item:focus-visible { outline-offset: -2px; }
+  .item .nm { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .sub { display: block; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .side { text-align: right; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: var(--ok-bg); color: var(--ok);
+           font-size: 11px; font-weight: 700; vertical-align: 1px; }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .empty { padding: 28px 16px; color: var(--muted); }
+  .empty button { margin-top: 10px; }
+  .foot { padding: 16px 16px 22px max(16px, env(safe-area-inset-left, 0px)); font-size: 11.5px; line-height: 1.55; color: var(--muted); }
+
+  .detail { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-block: 6px 22px; }
+  .back { display: inline-flex; align-items: center; gap: 6px; margin-left: -8px; padding: 6px 8px; border: 0; border-radius: 8px;
+          background: none; color: var(--accent); font-weight: 700; cursor: pointer; }
+  .back:hover { background: var(--hover); }
+  .kind { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+          text-transform: uppercase; color: var(--ink-2); }
+  .dname { margin: 4px 0 2px; font-size: 25px; font-weight: 800; line-height: 1.15; letter-spacing: -.025em; text-wrap: balance; }
+  .darea { color: var(--muted); }
+  .facts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 14px 0 16px; font-size: 13.5px; }
+  .facts .badge { margin: 0; font-size: 12px; padding: 2px 8px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 10px;
+         border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); font-weight: 700; text-decoration: none; cursor: pointer; }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .btn.small { height: 32px; padding: 0 12px; font-size: 13px; }
+  .rows { margin-top: 18px; border-top: 1px solid var(--line); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .row .k { font-size: 12.5px; color: var(--muted); }
+  .row .v { display: flex; align-items: center; gap: 10px; }
+  .mono { font-family: var(--mono); font-size: 13px; user-select: all; }
+  .nearby h3 { margin: 22px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .nearby .item { padding-left: 0; padding-right: 0; }
+
+  .mapwrap { position: relative; min-width: 0; min-height: 0; }
+  #map { position: absolute; inset: 0; background: var(--sea); }
+  .mapbtns { position: absolute; z-index: 1000; top: 12px; right: max(12px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 8px; }
+  .mbtn { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--line-strong); border-radius: 11px;
+          background: var(--panel); color: var(--ink); box-shadow: var(--shadow); cursor: pointer; font-size: 20px; font-weight: 600; line-height: 1; }
+  .mbtn:hover { background: var(--hover); }
+  .mbtn svg { width: 18px; height: 18px; }
+  .zoomgrp { display: flex; flex-direction: column; border: 1px solid var(--line-strong); border-radius: 11px; overflow: hidden; box-shadow: var(--shadow); }
+  .zoomgrp .mbtn { border: 0; border-radius: 0; box-shadow: none; }
+  .zoomgrp .mbtn + .mbtn { border-top: 1px solid var(--line); }
+  .mstatus { position: absolute; z-index: 1000; left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 6px 10px; border-radius: 8px;
+             background: var(--panel); color: var(--ink-2); box-shadow: var(--shadow); font-size: 12.5px; }
+  .attrib { position: absolute; z-index: 1000; right: max(8px, env(safe-area-inset-right, 0px)); bottom: 6px; padding: 1px 6px; border-radius: 4px;
+            background: color-mix(in srgb, var(--panel) 78%, transparent); color: var(--ink-2); font-size: 11px; }
+
+  .pl span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+             font: 600 10.5px/1 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--label);
+             text-shadow: 0 0 2px var(--halo), 0 0 2px var(--halo), 0 0 3px var(--halo), 0 0 6px var(--halo); }
+  .pl.r0 span { font-size: 15px; font-weight: 800; letter-spacing: .01em; text-transform: none; color: var(--label-strong); }
+  .pl.r1 span { font-size: 12.5px; font-weight: 700; letter-spacing: .01em; text-transform: none; color: var(--label-strong); }
+  .pl.r3 span { font-size: 9.5px; }
+
+  @media (max-width: 899px) {
+    .app { display: block; position: relative; }
+    .mapwrap { position: absolute; inset: 0; }
+    .panel { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1001; height: var(--sheet, 260px);
+             border-right: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, .2); overflow: hidden;
+             transition: height .3s cubic-bezier(.2, .8, .2, 1); }
+    .panel.dragging { transition: none; }
+    .pad { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .grab { display: flex; justify-content: center; padding: 9px 0 3px; touch-action: none; cursor: grab; }
+    .grab span { width: 42px; height: 5px; border-radius: 3px; background: var(--line-strong); }
+    .top { padding-block: 2px 8px; touch-action: none; }
+    .title { font-size: 18px; }
+    .item, .grp { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .attrib { top: 8px; bottom: auto; right: auto; left: max(8px, env(safe-area-inset-left, 0px)); }
+    .mstatus { top: 34px; bottom: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .panel, .leaflet-zoom-anim .leaflet-zoom-animated { transition: none !important; }
+  }
+</style>
+
+<div class="app">
+  <aside class="panel" id="panel" aria-label="allday stores">
+    <div class="grab" id="grab" aria-hidden="true"><span></span></div>
+    <div class="top pad" id="top">
+      <h1 class="title">allday stores in the UAE</h1>
+      <div class="meta">71 locations · Dubai, Abu Dhabi, Sharjah · unofficial map</div>
+    </div>
+
+    <div id="listView" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="controls pad" id="controls">
+        <div class="field">
+          <input id="q" type="search" placeholder="Search by name or area" aria-label="Search stores" autocomplete="off">
+          <button class="x" id="qClear" type="button" aria-label="Clear search" hidden>×</button>
+        </div>
+        <div class="seg" id="emSeg" role="group" aria-label="Emirate"></div>
+        <div class="chips" id="chips" role="group" aria-label="Store format"></div>
+        <div class="near" id="nearBox">
+          <label class="lbl" for="near">Sort by distance from</label>
+          <div class="field">
+            <input id="near" type="text" placeholder="Loading areas…" disabled autocomplete="off"
+                   role="combobox" aria-expanded="false" aria-controls="nearList" aria-autocomplete="list">
+            <button class="x" id="nearClear" type="button" aria-label="Clear area" hidden>×</button>
+          </div>
+          <ul class="suggest" id="nearList" role="listbox" hidden></ul>
+        </div>
+        <div class="sortrow">
+          <span class="lbl">Sort</span>
+          <div class="seg" id="sortSeg" role="group" aria-label="Sort order"></div>
+        </div>
+      </div>
+      <div class="summary pad" id="summary"></div>
+      <div class="scroll" id="scroll">
+        <ul class="list" id="list"></ul>
+        <div class="foot">
+          Unofficial map, not affiliated with allday. Store list compiled from public Google Maps listings on 24 November 2026; ratings are Google ratings. Check with the store before you visit.
+          Base map © OpenStreetMap contributors (ODbL).
+        </div>
+      </div>
+    </div>
+
+    <section class="detail pad" id="detail" hidden aria-live="polite"></section>
+  </aside>
+
+  <div class="mapwrap">
+    <div id="map" role="application" aria-label="Map of allday stores"></div>
+    <div class="mapbtns">
+      <button class="mbtn" id="fitBtn" type="button" title="Show all listed stores" aria-label="Show all listed stores">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+      <div class="zoomgrp">
+        <button class="mbtn" id="zin" type="button" aria-label="Zoom in">+</button>
+        <button class="mbtn" id="zout" type="button" aria-label="Zoom out">−</button>
+      </div>
+    </div>
+    <div class="mstatus" id="mstatus">Loading map…</div>
+    <div class="attrib">© OpenStreetMap contributors</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(() => {
+  // [location, format, emirate, lat, lng, phone, rating, reviews, flag, google cid]
+  const RAW = [
+    ['Dubai Hills', 'fresh', 'D', 25.111396, 55.248683, '058 197 6027', 5.0, 343, '', '1039009651979112998'],
+    ['Jumeirah Village Circle', 'supermarket', 'D', 25.066416, 55.210342, '04 447 3907', 3.9, 594, '24h', '2536138865385791399'],
+    ['Al Habtoor City', 'fresh', 'D', 25.183024, 55.255205, '04 589 6881', 4.5, 211, '', '321251739451465685'],
+    ['City Walk', 'advantage', 'D', 25.203351, 55.26132, '04 344 4755', 4.8, 270, '', '12426165010140967895'],
+    ['Golden Mile, Palm Jumeirah', 'fresh', 'D', 25.110399, 55.142995, '04 551 4955', 4.3, 362, '', '991463106297105776'],
+    ['Mankhool', 'fresh', 'D', 25.248035, 55.297832, '04 388 0880', 3.9, 341, '', '13279910653344386943'],
+    ['MOV', 'advantage', 'D', 24.913937, 55.010562, '054 349 4071', 4.7, 162, '', '9700390431504477032'],
+    ['Meydan District One', 'market', 'D', 25.164051, 55.274358, '055 650 0853', 4.4, 228, '', '17531556718351070029'],
+    ['Bahar, JBR', 'market', 'D', 25.078177, 55.135891, '04 552 2128', 4.2, 346, '24h', '1731696359824205729'],
+    ['Midtown', 'market', 'D', 25.027176, 55.181565, '04 564 1911', 4.0, 144, '', '14423705322206277985'],
+    ['Meydan South', 'market', 'D', 25.124472, 55.348943, '04 329 8789', 4.5, 193, '', '12681293017493074375'],
+    ['Souq Badr', 'market', 'D', 25.237051, 55.413357, '04 236 6900', 4.7, 215, '', '735307319508366715'],
+    ['FSG', 'minimart', 'D', 25.134806, 55.252887, '04 323 9062', 4.2, 5, '24h', '16895747157846657152'],
+    ['Golden Diamond Park', 'minimart', 'D', 25.126445, 55.208101, '056 525 7066', 4.9, 308, '', '3102961836277708260'],
+    ['ENBD Al Barsha', 'minimart', 'D', 25.106733, 55.204165, '055 554 7875', 4.7, 19, '', '14292628447634641845'],
+    ['City Walk Mall', 'minimart', 'D', 25.206473, 55.26352, '056 686 4977', 4.9, 258, '', '505905498690668572'],
+    ['Bay Square', 'minimart', 'D', 25.185523, 55.279602, '04 456 0795', 4.4, 99, '', '3200661573910427851'],
+    ['D3', 'minimart', 'D', 25.186979, 55.2971, '056 539 9688', 4.8, 327, '', '15619083202336378812'],
+    ['dnata', 'minimart', 'D', 25.186585, 55.256789, '04 321 9505', 4.5, 56, '', '601084056820608605'],
+    ['Dubai Mall', 'minimart', 'D', 25.198514, 55.277572, '056 525 7069', 4.5, 270, '', '17356536372878467790'],
+    ['Emaar Square', 'minimart', 'D', 25.20045, 55.27423, '056 525 7141', 4.7, 172, '', '2774158221032657568'],
+    ['Single Business Tower', 'minimart', 'D', 25.188143, 55.258584, '052 127 0092', 4.9, 149, '', '561908833712895595'],
+    ['JBR The Beach', 'minimart', 'D', 25.077198, 55.13261, '056 525 7135', 4.5, 128, '', '3309206216990883397'],
+    ['Marsa Plaza', 'minimart', 'D', 25.231656, 55.34715, '056 771 4756', 4.9, 95, '', '5038539803907151286'],
+    ['Palm Azraq', 'minimart', 'D', 25.110205, 55.146939, '04 422 6816', 4.9, 71, '', '13131617225761309260'],
+    ['Marina Plaza', 'minimart', 'D', 25.075189, 55.1402, '056 525 7067', 4.6, 96, '', '13654829688834159815'],
+    ['Palm Manhal', 'minimart', 'D', 25.108371, 55.14944, '04 552 2129', 4.6, 63, '', '4393869600734375835'],
+    ['Dubai Internet City', 'minimart', 'D', 25.093781, 55.158921, '052 449 5329', 4.8, 25, '', '15282869296374811693'],
+    ['Uptown', 'minimart', 'D', 25.060966, 55.14182, '056 686 3951', 4.9, 77, '', '7280288401885326208'],
+    ['Studio City', 'minimart', 'D', 25.040499, 55.2517, '04 431 3280', 4.4, 38, '', '3082082770106139144'],
+    ['Dubai South HQ', 'minimart', 'D', 24.910192, 55.119249, '04 887 9290', 4.8, 44, '', '3950816977594635357'],
+    ['Dubai Outsource Zone', 'minimart', 'D', 25.123517, 55.426123, '056 525 7086', 4.7, 88, '', '14671612425426006647'],
+    ['Media City Building 10', 'minimart', 'D', 25.102255, 55.169553, '058 148 6761', 4.9, 84, '', '1814608444985440190'],
+    ['Media City Building 7', 'minimart', 'D', 25.095496, 55.15746, '055 782 1435', 5.0, 78, '', '14725212833669135482'],
+    ['CNN Building, Media City', 'minimart', 'D', 25.093133, 55.151609, '050 483 5827', 5.0, 51, '', '15858646660090888137'],
+    ['DOM', 'minimart', 'D', 25.073126, 55.398747, '054 349 4070', 4.8, 149, '', '5686349859571572828'],
+    ['Dubai CommerCity', 'minimart', 'D', 25.235416, 55.368434, '058 914 8820', 5.0, 220, '', '3856685911158524959'],
+    ['Emirates HQ', 'minimart', 'D', 25.24138, 55.366506, '056 525 7062', 4.9, 358, '24h', '1117052901471866119'],
+    ['Marina Heights Tower', 'minimart', 'D', 25.086995, 55.14811, '055 782 1548', 4.8, 33, '', '2547281030936220969'],
+    ['Grosvenor House', 'minimart', 'D', 25.085563, 55.143437, '056 525 7151', 5.0, 46, '', '14981112983778126089'],
+    ['Marriott Harbour', 'minimart', 'D', 25.087699, 55.145895, '', 5.0, 3, '24h', '9769331020115064171'],
+    ['Sofitel Palm', 'minimart', 'D', 25.140372, 55.134145, '04 513 6468', 4.1, 31, '', '2207126734571481564'],
+    ['RTA HQ', 'minimart', 'D', 25.234206, 55.356321, '04 250 0856', 4.8, 210, '', '14946985151231927528'],
+    ['Dubai Municipality', 'minimart', 'D', 25.234251, 55.354213, '058 987 5624', 5.0, 2, '', '4920199808442458842'],
+    ['ENBD Meydan', 'minimart', 'D', 25.161317, 55.325005, '052 798 5916', 4.9, 50, '', '16847947944346903841'],
+    ['Cargo Village', 'minimart', 'D', 25.254704, 55.342866, '052 798 5801', 4.8, 131, '24h', '13473220566253570793'],
+    ['ECTC', 'minimart', 'D', 25.240995, 55.342049, '056 525 7068', 4.7, 21, '', '9139674443833225993'],
+    ['Novotel', 'minimart', 'D', 25.221561, 55.28866, '058 197 5282', 4.8, 32, '24h', '17522052771516559882'],
+    ['ibis One Central', 'minimart', 'D', 25.221627, 55.285959, '052 167 5458', 4.8, 37, '24h', '10354565473652252621'],
+    ['DSO HQ', 'minimart', 'D', 25.124832, 55.380921, '', 4.7, 35, '', '681297207476906427'],
+    ['ECC', 'minimart', 'D', 25.125391, 55.42643, '052 798 5940', 4.8, 16, '24h', '8998965094816057254'],
+    ['BITS Pilani', 'minimart', 'D', 25.131611, 55.419908, '055 801 7029', 4.8, 20, '', '15408676144735782692'],
+    ['JAFZA One', 'minimart', 'D', 24.964743, 55.079842, '056 525 7146', 4.8, 26, '', '14454646838066074418'],
+    ['dnata Campus, DAFZ', 'minimart', 'D', 25.259973, 55.369879, '056 525 7143', 4.3, 18, '', '7025864695646669184'],
+    ['Supreme Court Complex', 'minimart', 'D', 25.249472, 55.32019, '056 525 7148', 5.0, 18, '', '17223415578228514627'],
+    ['Festival Tower', 'minimart', 'D', 25.223837, 55.351016, '056 771 4839', 4.6, 47, '', '9934319169600951072'],
+    ['Emirates Accommodation', 'minimart', 'D', 25.181076, 55.377474, '04 326 1228', 4.5, 42, '24h', ''],
+    ['D1 Tower', 'minimart', 'D', 25.226838, 55.343563, '04 240 8507', 4.6, 33, '', '1285307593696062138'],
+    ['Dubai Land Department', 'minimart', 'D', 25.261937, 55.315937, '050 405 3195', 5.0, 3, '', '4797585705946627591'],
+    ['Dubai Customs', 'minimart', 'D', 25.256084, 55.28286, '054 465 7048', null, 0, 'closed', '17762405196763191034'],
+    ['Riff 5, Aljada', 'market', 'S', 25.312551, 55.477065, '052 784 4187', 4.8, 153, '', '14177215854492296308'],
+    ['Rehan, Aljada', 'market', 'S', 25.316361, 55.479688, '052 784 4187', 3.9, 90, '', '7328536723274897097'],
+    ['Food Village, Aljada', 'minimart', 'S', 25.317848, 55.475487, '052 597 4535', 4.8, 55, '', '15125758804406491412'],
+    ['Ansam, Yas Island', 'market', 'A', 24.483887, 54.600711, '052 312 0578', 4.3, 93, '', '5696417778221583289'],
+    ['The Souk, Qaryat Al Beri', 'market', 'A', 24.408827, 54.491425, '02 645 6985', 4.8, 118, '', '11546606371622840407'],
+    ['Bridges, Reem Island', 'market', 'A', 24.509173, 54.406243, '055 782 1503', 4.3, 24, '', '11147766648332560844'],
+    ['Yas Mall', 'minimart', 'A', 24.490857, 54.60752, '056 525 7145', 4.6, 114, '', '12044917865299739856'],
+    ['DED', 'minimart', 'A', 24.493522, 54.361013, '055 782 1504', 5.0, 41, '', '17429581860545607390'],
+    ['Mubadala Tower', 'minimart', 'A', 24.459462, 54.390834, '058 894 5769', 4.7, 22, '', '1905379173787344144'],
+    ['Abu Dhabi Municipality', 'minimart', 'A', 24.487855, 54.378015, '058 914 8819', 4.8, 8, '', '2686200610293940457'],
+    ['Fatima College', 'minimart', 'A', 24.350447, 54.622364, '054 409 7336', 5.0, 1, '', '9234092800047925700']
+  ];
+  const GROUP_OF = { minimart: 'm', market: 'k', fresh: 's', advantage: 's', supermarket: 's' };
+  const GROUPS = [['m', 'Minimart', '--mini'], ['k', 'Market', '--market'], ['s', 'Supermarket', '--super']];
+  const TOKEN = { m: 'var(--mini)', k: 'var(--market)', s: 'var(--super)' };
+  const EMIRATES = { D: 'Dubai', A: 'Abu Dhabi', S: 'Sharjah' };
+  const BOX = { W: 54.15, S: 24.15, E: 55.75, N: 25.45 };
+
+  const STORES = RAW.map((r, i) => ({
+    id: 'store-' + (i + 1), loc: r[0], sub: r[1], em: r[2], lat: r[3], lng: r[4], phone: r[5],
+    rating: r[6], reviews: r[7], flag: r[8], cid: r[9], g: GROUP_OF[r[1]], area: '', dist: null
+  }));
+  const BY_ID = new Map(STORES.map(s => [s.id, s]));
+  let PLACES = [];
+
+  const state = { q: '', em: 'all', fmt: 'all', only24: false, sort: 'name', origin: null, sel: null };
+
+  const $ = s => document.querySelector(s);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const km = (a, b) => {
+    const R = 6371, r = Math.PI / 180;
+    const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  };
+  const fmtDist = d => d < 1 ? Math.max(10, Math.round(d * 100) * 10) + ' m' : (d < 10 ? d.toFixed(1) : Math.round(d)) + ' km';
+  const gmapsUrl = s => s.cid ? 'https://maps.google.com/?cid=' + s.cid : 'https://www.google.com/maps/search/?api=1&query=' + s.lat + ',' + s.lng;
+  const dirUrl = s => 'https://www.google.com/maps/dir/?api=1&destination=' + s.lat + ',' + s.lng;
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+
+  /* ---------------- theme ---------------- */
+  let C = {};
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    const g = n => cs.getPropertyValue(n).trim();
+    C = { land: g('--land'), mask: g('--mask'), edge: g('--line-strong'), ink: g('--ink'), ring: g('--ring'), panel: g('--panel'),
+          mw: g('--road-mw'), mwCase: g('--road-mw-case'), tr: g('--road-tr'), trCase: g('--road-tr-case'),
+          pr: g('--road-pr'), prCase: g('--road-pr-case'), m: g('--mini'), k: g('--market'), s: g('--super') };
+  }
+  readTheme();
+
+  /* ---------------- map ---------------- */
+  const map = L.map('map', {
+    zoomControl: false, attributionControl: false, zoomSnap: 0.25, wheelPxPerZoomLevel: 90,
+    minZoom: 8, maxZoom: 18, maxBoundsViscosity: 0.8,
+    maxBounds: L.latLngBounds([[BOX.S - 0.35, BOX.W - 0.45], [BOX.N + 0.35, BOX.E + 0.45]])
+  });
+  const pane = (name, z, events) => { const p = map.createPane(name); p.style.zIndex = z; if (!events) p.style.pointerEvents = 'none'; return p; };
+  pane('base', 300); pane('labels', 420); pane('pins', 450, true); pane('origin', 460);
+  const baseR = L.canvas({ pane: 'base', padding: 0.5 });
+  const pinR = L.canvas({ pane: 'pins', padding: 0.5, tolerance: 7 });
+  const originR = L.canvas({ pane: 'origin', padding: 0.5 });
+  const base = {};
+
+  const pinLayer = L.layerGroup().addTo(map);
+  const labelLayer = L.layerGroup().addTo(map);
+  let originMarker = null;
+
+  for (const s of STORES) {
+    s.marker = L.circleMarker([s.lat, s.lng], { renderer: pinR, pane: 'pins', radius: 6, weight: 2 });
+    s.marker.bindTooltip('<b>' + esc(s.loc) + '</b><span class="tsub">allday ' + esc(s.sub) + (s.flag === 'closed' ? ' · temporarily closed' : '') + '</span>',
+                         { direction: 'top', offset: [0, -8] });
+    s.marker.on('click', () => select(s));
+  }
+
+  function pinRadius() { const z = map.getZoom(); return z < 10 ? 4.5 : z < 12 ? 6 : z < 14 ? 7.5 : 9; }
+  function styleMarkers() {
+    const r = pinRadius();
+    for (const s of STORES) {
+      const sel = s === state.sel;
+      s.marker.setStyle({ radius: sel ? r + 4 : r, color: sel ? C.ink : C.ring, weight: sel ? 3 : (r < 5 ? 1.5 : 2),
+                          fillColor: C[s.g], fillOpacity: s.flag === 'closed' ? 0.45 : 1 });
+    }
+    if (state.sel && pinLayer.hasLayer(state.sel.marker)) state.sel.marker.bringToFront();
+  }
+
+  function roadStyle() {
+    if (!base.mw) return;
+    const z = map.getZoom();
+    const w = (a, b, c, d) => z < 10 ? a : z < 12 ? b : z < 14 ? c : d;
+    base.mwCase.setStyle({ color: C.mwCase, weight: w(2.4, 4, 6.5, 10) });
+    base.mw.setStyle({ color: C.mw, weight: w(1.2, 2.4, 4.5, 7.5) });
+    base.trCase.setStyle({ color: C.trCase, weight: w(1.8, 3.2, 5.5, 8.5) });
+    base.tr.setStyle({ color: C.tr, weight: w(0.8, 1.8, 3.6, 6.2) });
+    base.prCase.setStyle({ color: C.prCase, weight: w(0, 1.8, 4, 6.8), opacity: z < 10.75 ? 0 : 1 });
+    base.pr.setStyle({ color: C.pr, weight: w(0, 1, 2.6, 5), opacity: z < 10.75 ? 0 : 1 });
+  }
+
+  function applyTheme() {
+    readTheme();
+    if (base.land) {
+      base.land.setStyle({ fillColor: C.land });
+      base.mask.setStyle({ fillColor: C.mask });
+      base.edge.setStyle({ color: C.edge });
+    }
+    roadStyle();
+    styleMarkers();
+    if (originMarker) originMarker.setStyle({ fillColor: C.ink, color: C.ring });
+  }
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {}
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  /* ---------------- place labels ---------------- */
+  const labelPool = new Map();
+  function updateLabels() {
+    if (!PLACES.length) return;
+    const z = map.getZoom();
+    const maxRank = z < 9 ? 0 : z < 10.75 ? 1 : z < 12.75 ? 2 : 3;
+    const size = map.getSize();
+    const placed = [];
+    const want = new Set();
+    if (originMarker) { const o = map.latLngToContainerPoint(originMarker.getLatLng()); placed.push([o.x - 12, o.y - 14, o.x + 160, o.y + 14]); }
+    for (const p of PLACES) {
+      if (p.rank > maxRank) continue;
+      const pt = map.latLngToContainerPoint([p.lat, p.lng]);
+      if (pt.x < -80 || pt.y < -20 || pt.x > size.x + 80 || pt.y > size.y + 20) continue;
+      const cw = [8.6, 7.3, 7.7, 7.0][p.rank], h = p.rank <= 1 ? 20 : 15;
+      const w = p.name.length * cw + 12;
+      const b = [pt.x - w / 2, pt.y - h / 2, pt.x + w / 2, pt.y + h / 2];
+      if (placed.some(q => !(b[2] < q[0] || b[0] > q[2] || b[3] < q[1] || b[1] > q[3]))) continue;
+      placed.push(b);
+      want.add(p);
+      if (placed.length > 110) break;
+    }
+    for (const [p, m] of labelPool) if (!want.has(p) && labelLayer.hasLayer(m)) labelLayer.removeLayer(m);
+    for (const p of want) {
+      let m = labelPool.get(p);
+      if (!m) {
+        const span = el('span', null, p.name);
+        m = L.marker([p.lat, p.lng], { pane: 'labels', interactive: false, keyboard: false,
+              icon: L.divIcon({ className: 'pl r' + p.rank, html: span, iconSize: [0, 0] }) });
+        labelPool.set(p, m);
+      }
+      if (!labelLayer.hasLayer(m)) labelLayer.addLayer(m);
+    }
+  }
+
+  map.on('zoomend', () => { roadStyle(); styleMarkers(); });
+  map.on('moveend', updateLabels);
+
+  /* ---------------- bottom sheet (phones) ---------------- */
+  const panel = $('#panel'), appEl = $('.app');
+  const sheetMQ = matchMedia('(max-width: 899px)');
+  const isSheet = () => sheetMQ.matches;
+  let sheet = 'peek', sheetPx = 0, peekPx = 260;
+  function measurePeek() {
+    if ($('#listView').style.display === 'none') return;
+    const chips = $('#chips');
+    const top = panel.getBoundingClientRect().top;
+    const h = chips.getBoundingClientRect().bottom - top + 14;
+    if (h > 120) peekPx = Math.round(h);
+  }
+  function sheetHeights() {
+    const H = appEl.clientHeight;
+    const card = Math.min(Math.round(H * 0.62), ($('#detail').scrollHeight || 320) + 30);
+    return { peek: Math.min(peekPx, Math.round(H * 0.5)), half: Math.round(H * 0.52), full: H - 44, card: Math.max(card, 220) };
+  }
+  function setSheet(name, px) {
+    if (!isSheet()) { panel.style.removeProperty('--sheet'); sheetPx = 0; return; }
+    sheet = name;
+    sheetPx = px != null ? px : sheetHeights()[name];
+    panel.style.setProperty('--sheet', sheetPx + 'px');
+  }
+  (() => {
+    let drag = null;
+    const zones = [$('#grab'), $('#top')];
+    const down = e => {
+      if (!isSheet()) return;
+      drag = { y: e.clientY, h: panel.getBoundingClientRect().height, moved: false, id: e.pointerId, t: e.currentTarget };
+      e.currentTarget.setPointerCapture(e.pointerId);
+      panel.classList.add('dragging');
+    };
+    const move = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dy = e.clientY - drag.y;
+      if (Math.abs(dy) > 5) drag.moved = true;
+      const H = appEl.clientHeight;
+      sheetPx = Math.max(120, Math.min(H - 44, drag.h - dy));
+      panel.style.setProperty('--sheet', sheetPx + 'px');
+    };
+    const up = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      panel.classList.remove('dragging');
+      const moved = drag.moved; drag = null;
+      const hs = sheetHeights();
+      const opts = state.sel ? ['card', 'full'] : ['peek', 'half', 'full'];
+      if (!moved) { setSheet(sheet === 'full' ? (state.sel ? 'card' : 'peek') : 'full'); return; }
+      let best = opts[0];
+      for (const o of opts) if (Math.abs(hs[o] - sheetPx) < Math.abs(hs[best] - sheetPx)) best = o;
+      setSheet(best);
+    };
+    for (const z of zones) {
+      z.addEventListener('pointerdown', down);
+      z.addEventListener('pointermove', move);
+      z.addEventListener('pointerup', up);
+      z.addEventListener('pointercancel', up);
+    }
+  })();
+
+  function pads() {
+    if (isSheet()) return [[28, 48], [28, sheetPx + 24]];
+    return [[48, 48], [72, 48]];
+  }
+  function fitPoints(pts, animate = true, maxZoom = 15) {
+    if (!pts.length) return;
+    const b = L.latLngBounds(pts);
+    const [tl, br] = pads();
+    const o = { paddingTopLeft: tl, paddingBottomRight: br, maxZoom };
+    if (animate) map.flyToBounds(b, Object.assign(o, { duration: 0.7 })); else map.fitBounds(b, o);
+  }
+  function centerOn(latlng, z) {
+    if (isSheet()) {
+      const pt = map.project(latlng, z).add([0, sheetPx / 2 - 10]);
+      map.flyTo(map.unproject(pt, z), z, { duration: 0.7 });
+    } else {
+      map.flyTo(latlng, z, { duration: 0.7 });
+    }
+  }
+
+  /* ---------------- filtering & list ---------------- */
+  function visible() {
+    const q = state.q;
+    return STORES.filter(s =>
+      (state.em === 'all' || s.em === state.em) &&
+      (state.fmt === 'all' || s.g === state.fmt) &&
+      (!state.only24 || s.flag === '24h') &&
+      (!q || ('allday ' + s.sub + ' ' + s.loc + ' ' + s.area + ' ' + EMIRATES[s.em]).toLowerCase().includes(q)));
+  }
+
+  function buildControls() {
+    const emSeg = $('#emSeg');
+    [['all', 'All', STORES.length], ...Object.entries(EMIRATES).map(([k, v]) => [k, v, STORES.filter(s => s.em === k).length])]
+      .forEach(([key, name, n]) => {
+        const b = el('button'); b.type = 'button'; b.dataset.k = key;
+        b.append(name, el('span', 'n', String(n)));
+        b.addEventListener('click', () => {
+          state.em = key; render();
+          fitPoints(visible().map(s => [s.lat, s.lng]));
+        });
+        emSeg.append(b);
+      });
+    const chips = $('#chips');
+    const mk = (key, text, n, token) => {
+      const b = el('button', 'chip'); b.type = 'button'; b.dataset.k = key;
+      if (token) { const d = el('span', 'dot'); d.style.setProperty('--c', 'var(' + token + ')'); b.append(d); }
+      b.append(text, el('span', 'n', String(n)));
+      chips.append(b);
+      return b;
+    };
+    mk('all', 'All', STORES.length).addEventListener('click', () => { state.fmt = 'all'; render(); });
+    for (const [g, name, token] of GROUPS) {
+      mk(g, name, STORES.filter(s => s.g === g).length, token).addEventListener('click', () => { state.fmt = state.fmt === g ? 'all' : g; render(); });
+    }
+    const t24 = mk('24h', '24 hours', STORES.filter(s => s.flag === '24h').length);
+    t24.addEventListener('click', () => { state.only24 = !state.only24; render(); });
+
+    const sortSeg = $('#sortSeg');
+    [['name', 'Name'], ['rating', 'Rating'], ['dist', 'Distance']].forEach(([key, name]) => {
+      const b = el('button', null, name); b.type = 'button'; b.dataset.k = key;
+      b.addEventListener('click', () => {
+        if (key === 'dist' && !state.origin) { $('#near').focus(); return; }
+        state.sort = key; render();
+      });
+      sortSeg.append(b);
+    });
+
+    const q = $('#q'), qClear = $('#qClear');
+    q.addEventListener('input', () => { state.q = q.value.trim().toLowerCase(); qClear.hidden = !q.value; render(); });
+    q.addEventListener('focus', () => { if (isSheet() && sheet !== 'full') setSheet('full'); });
+    q.addEventListener('keydown', e => { if (e.key === 'Enter') { const v = visible(); if (v.length === 1) select(v[0]); } });
+    qClear.addEventListener('click', () => { q.value = ''; state.q = ''; qClear.hidden = true; render(); q.focus(); });
+  }
+
+  function storeRow(s, opts = {}) {
+    const li = el('li');
+    const b = el('button', 'item'); b.type = 'button';
+    const dot = el('span', 'dot'); dot.style.setProperty('--c', TOKEN[s.g]);
+    const t = el('span');
+    const nm = el('span', 'nm', s.loc);
+    if (s.flag === '24h') nm.append(el('span', 'badge', '24h'));
+    if (s.flag === 'closed') nm.append(el('span', 'badge warn', 'closed'));
+    const subText = 'allday ' + s.sub + (s.area && s.area !== s.loc && s.area !== EMIRATES[s.em] ? ' · near ' + s.area : '');
+    t.append(nm, el('span', 'sub', subText));
+    const d = opts.dist != null ? opts.dist : (state.origin ? s.dist : null);
+    const side = el('span', 'side', d != null ? fmtDist(d) : (s.rating ? '★ ' + s.rating.toFixed(1) : '–'));
+    b.append(dot, t, side);
+    b.addEventListener('click', () => select(s));
+    b.addEventListener('mouseenter', () => { if (!isSheet()) s.marker.openTooltip(); });
+    b.addEventListener('mouseleave', () => s.marker.closeTooltip());
+    li.append(b);
+    return li;
+  }
+
+  function render() {
+    for (const b of document.querySelectorAll('#emSeg button')) b.setAttribute('aria-pressed', b.dataset.k === state.em);
+    for (const b of document.querySelectorAll('#chips .chip'))
+      b.setAttribute('aria-pressed', b.dataset.k === '24h' ? state.only24 : b.dataset.k === state.fmt);
+    if (state.sort === 'dist' && !state.origin) state.sort = 'name';
+    for (const b of document.querySelectorAll('#sortSeg button')) b.setAttribute('aria-pressed', b.dataset.k === state.sort);
+
+    if (state.origin) for (const s of STORES) s.dist = km(state.origin, s);
+    const vis = visible();
+
+    pinLayer.clearLayers();
+    for (const s of vis) pinLayer.addLayer(s.marker);
+    if (state.sel && !vis.includes(state.sel)) pinLayer.addLayer(state.sel.marker);
+    styleMarkers();
+
+    const list = $('#list');
+    list.replaceChildren();
+    const byName = (a, b) => a.loc.localeCompare(b.loc);
+    if (!vis.length) {
+      const li = el('li', 'empty');
+      li.append(el('div', null, 'No stores match these filters.'));
+      const reset = el('button', 'btn small', 'Reset filters'); reset.type = 'button';
+      reset.addEventListener('click', resetFilters);
+      li.append(reset);
+      list.append(li);
+    } else if (state.sort === 'name') {
+      for (const em of ['D', 'A', 'S']) {
+        const grp = vis.filter(s => s.em === em).sort(byName);
+        if (!grp.length) continue;
+        list.append(el('li', 'grp', EMIRATES[em] + ' · ' + grp.length));
+        for (const s of grp) list.append(storeRow(s));
+      }
+    } else {
+      const sorted = vis.slice().sort(state.sort === 'dist'
+        ? (a, b) => a.dist - b.dist
+        : (a, b) => (b.rating || 0) - (a.rating || 0) || b.reviews - a.reviews);
+      for (const s of sorted) list.append(storeRow(s));
+    }
+
+    const sum = $('#summary');
+    sum.replaceChildren();
+    const txt = el('span', null, vis.length === STORES.length ? 'All ' + STORES.length + ' stores' : vis.length + ' of ' + STORES.length + ' stores');
+    sum.append(txt);
+    if (state.origin && vis.length) {
+      const nearest = vis.reduce((a, b) => (a.dist <= b.dist ? a : b));
+      const nb = el('button', null, 'Closest: ' + nearest.loc + ' · ' + fmtDist(nearest.dist));
+      nb.type = 'button';
+      nb.addEventListener('click', () => select(nearest));
+      sum.append(nb);
+    } else if (vis.length < STORES.length) {
+      const rb = el('button', null, 'Reset'); rb.type = 'button';
+      rb.addEventListener('click', resetFilters);
+      sum.append(rb);
+    }
+  }
+
+  function resetFilters() {
+    state.q = ''; state.em = 'all'; state.fmt = 'all'; state.only24 = false;
+    $('#q').value = ''; $('#qClear').hidden = true;
+    render();
+    fitPoints(STORES.map(s => [s.lat, s.lng]));
+  }
+
+  /* ---------------- detail ---------------- */
+  function showView(v) {
+    const lv = $('#listView'), dv = $('#detail');
+    lv.style.display = v === 'list' ? 'flex' : 'none';
+    dv.hidden = v !== 'detail';
+  }
+  function setHash(h) {
+    try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) {}
+  }
+
+  function renderDetail() {
+    const s = state.sel, d = $('#detail');
+    d.replaceChildren();
+    const back = el('button', 'back', '‹ All stores'); back.type = 'button';
+    back.addEventListener('click', deselect);
+    const kind = el('div', 'kind');
+    const dot = el('span', 'dot'); dot.style.setProperty('--c', TOKEN[s.g]);
+    kind.append(dot, 'allday ' + s.sub);
+    const name = el('h2', 'dname', s.loc);
+    const where = s.area && s.area !== EMIRATES[s.em] && s.area !== s.loc ? 'Near ' + s.area + ', ' + EMIRATES[s.em] : EMIRATES[s.em];
+    const area = el('div', 'darea', where);
+
+    const facts = el('div', 'facts');
+    if (s.rating) {
+      const r = el('span'); r.append(el('b', null, '★ ' + s.rating.toFixed(1)), ' · ' + s.reviews + ' Google review' + (s.reviews === 1 ? '' : 's'));
+      facts.append(r);
+    }
+    if (s.flag === '24h') facts.append(el('span', 'badge', 'Open 24 hours'));
+    if (s.flag === 'closed') facts.append(el('span', 'badge warn', 'Temporarily closed'));
+    if (state.origin) facts.append(el('span', null, fmtDist(km(state.origin, s)) + ' from ' + state.origin.name));
+
+    const actions = el('div', 'actions');
+    const dir = el('a', 'btn primary', 'Directions'); dir.href = dirUrl(s); dir.target = '_blank'; dir.rel = 'noopener';
+    const gm = el('a', 'btn', 'Google Maps'); gm.href = gmapsUrl(s); gm.target = '_blank'; gm.rel = 'noopener';
+    actions.append(dir, gm);
+
+    const rows = el('div', 'rows');
+    const row = (k, ...v) => { const r = el('div', 'row'); const vv = el('div', 'v'); vv.append(...v); r.append(el('span', 'k', k), vv); rows.append(r); };
+    if (s.phone) {
+      const num = el('span', 'mono', s.phone);
+      const copy = el('button', 'btn small', 'Copy'); copy.type = 'button';
+      copy.addEventListener('click', () => {
+        const done = () => { copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy'; }, 1600); };
+        const fallback = () => { const rg = document.createRange(); rg.selectNodeContents(num); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); };
+        try { navigator.clipboard.writeText(s.phone).then(done, fallback); } catch (e) { fallback(); }
+      });
+      row('Phone', num, copy);
+    } else {
+      row('Phone', el('span', 'darea', 'Not listed'));
+    }
+    row('Coordinates', el('span', 'mono', s.lat.toFixed(5) + ', ' + s.lng.toFixed(5)));
+
+    const nearby = el('div', 'nearby');
+    nearby.append(el('h3', null, 'Closest other allday stores'));
+    const ul = el('ul', 'list');
+    STORES.filter(o => o !== s).map(o => [o, km(s, o)]).sort((a, b) => a[1] - b[1]).slice(0, 3)
+      .forEach(([o, dd]) => ul.append(storeRow(o, { dist: dd })));
+    nearby.append(ul);
+
+    d.append(back, kind, name, area, facts, actions, rows, nearby);
+  }
+
+  function select(s) {
+    state.sel = s;
+    renderDetail();
+    showView('detail');
+    $('#detail').scrollTop = 0;
+    if (!pinLayer.hasLayer(s.marker)) pinLayer.addLayer(s.marker);
+    styleMarkers();
+    s.marker.closeTooltip();
+    if (isSheet()) setSheet('card');
+    centerOn([s.lat, s.lng], Math.max(map.getZoom(), 15));
+    setHash(s.id);
+  }
+  function deselect() {
+    const was = state.sel;
+    state.sel = null;
+    showView('list');
+    render();
+    if (isSheet()) setSheet('half');
+    setHash('');
+    if (was) {
+      const btn = [...document.querySelectorAll('#list .item')].find(b => b.querySelector('.nm')?.firstChild?.textContent === was.loc);
+      if (btn && !isSheet()) btn.focus({ preventScroll: false });
+    }
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.sel && !e.defaultPrevented) deselect(); });
+  window.addEventListener('hashchange', () => {
+    const s = BY_ID.get(location.hash.slice(1));
+    if (s && s !== state.sel) select(s);
+  });
+
+  /* ---------------- near an area ---------------- */
+  const nearInput = $('#near'), nearList = $('#nearList'), nearClear = $('#nearClear');
+  let nearOpts = [], nearIdx = -1;
+  const KIND = ['city', 'town', 'area', 'neighbourhood'];
+  function closeNear() { nearList.hidden = true; nearInput.setAttribute('aria-expanded', 'false'); nearIdx = -1; }
+  function suggestNear() {
+    const q = nearInput.value.trim().toLowerCase();
+    if (!q || !PLACES.length) { closeNear(); return; }
+    const hits = [];
+    for (const p of PLACES) {
+      const n = p.name.toLowerCase(), i = n.indexOf(q);
+      if (i < 0) continue;
+      hits.push([i === 0 ? 0 : 1, p.rank, n.length, p]);
+    }
+    hits.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+    nearOpts = hits.slice(0, 7).map(h => h[3]);
+    nearList.replaceChildren();
+    if (!nearOpts.length) {
+      const li = el('li', null, 'No area called “' + nearInput.value.trim() + '”');
+      li.setAttribute('aria-disabled', 'true');
+      nearList.append(li);
+    }
+    nearOpts.forEach((p, i) => {
+      const li = el('li'); li.setAttribute('role', 'option'); li.id = 'near-opt-' + i;
+      const closest = STORES.reduce((a, b) => (km(p, a) <= km(p, b) ? a : b));
+      li.append(el('span', null, p.name), el('span', 'k', KIND[p.rank] + ' · nearest store ' + fmtDist(km(p, closest))));
+      li.addEventListener('mousedown', e => { e.preventDefault(); pickNear(p); });
+      nearList.append(li);
+    });
+    nearIdx = -1;
+    nearList.hidden = false;
+    nearInput.setAttribute('aria-expanded', 'true');
+  }
+  function markNear() {
+    [...nearList.children].forEach((li, i) => li.setAttribute('aria-selected', i === nearIdx));
+    nearInput.setAttribute('aria-activedescendant', nearIdx >= 0 ? 'near-opt-' + nearIdx : '');
+  }
+  function setOrigin(o, fit) {
+    state.origin = o;
+    if (originMarker) { originMarker.remove(); originMarker = null; }
+    if (o) {
+      originMarker = L.circleMarker([o.lat, o.lng], { renderer: originR, pane: 'origin', radius: 7, weight: 3, color: C.ring, fillColor: C.ink, fillOpacity: 1, interactive: false })
+        .bindTooltip(esc(o.name), { permanent: true, direction: 'right', offset: [8, 0], className: 'origin-tip' }).addTo(map);
+      nearInput.value = o.name; nearClear.hidden = false;
+      state.sort = 'dist';
+      store.set('allday-map-origin', JSON.stringify(o));
+    } else {
+      nearInput.value = ''; nearClear.hidden = true;
+      if (state.sort === 'dist') state.sort = 'name';
+      store.set('allday-map-origin', null);
+    }
+    render();
+    updateLabels();
+    if (o && fit) {
+      const near3 = visible().slice().sort((a, b) => a.dist - b.dist).slice(0, 3);
+      fitPoints([[o.lat, o.lng], ...near3.map(s => [s.lat, s.lng])], true, 15);
+    }
+  }
+  function pickNear(p) {
+    closeNear();
+    nearInput.blur();
+    if (state.sel) { state.sel = null; showView('list'); setHash(''); }
+    setOrigin({ name: p.name, lat: p.lat, lng: p.lng }, true);
+    if (isSheet()) setSheet('half');
+  }
+  nearInput.addEventListener('input', suggestNear);
+  nearInput.addEventListener('focus', () => { if (isSheet() && sheet !== 'full') setSheet('full'); if (nearInput.value && !state.origin) suggestNear(); });
+  nearInput.addEventListener('blur', () => setTimeout(closeNear, 120));
+  nearInput.addEventListener('keydown', e => {
+    if (nearList.hidden) return;
+    if (e.key === 'ArrowDown') { nearIdx = Math.min(nearOpts.length - 1, nearIdx + 1); markNear(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { nearIdx = Math.max(0, nearIdx - 1); markNear(); e.preventDefault(); }
+    else if (e.key === 'Enter') { const p = nearOpts[nearIdx >= 0 ? nearIdx : 0]; if (p) pickNear(p); e.preventDefault(); }
+    else if (e.key === 'Escape') { closeNear(); e.preventDefault(); }
+  });
+  nearClear.addEventListener('click', () => { setOrigin(null); nearInput.focus(); });
+
+  /* ---------------- buttons, resize ---------------- */
+  $('#fitBtn').addEventListener('click', () => {
+    const v = visible();
+    fitPoints((v.length ? v : STORES).map(s => [s.lat, s.lng]));
+  });
+  $('#zin').addEventListener('click', () => map.zoomIn(1));
+  $('#zout').addEventListener('click', () => map.zoomOut(1));
+
+  let resizeT = 0;
+  function onLayout() {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => {
+      map.invalidateSize();
+      if (isSheet()) { measurePeek(); setSheet(sheet); } else setSheet('none');
+    }, 80);
+  }
+  window.addEventListener('resize', onLayout);
+  try { sheetMQ.addEventListener('change', onLayout); } catch (e) {}
+
+  /* ---------------- base map data ---------------- */
+  const dec = a => { const out = []; let x = 0, y = 0; for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; out.push([y / 1e5, x / 1e5]); } return out; };
+  function loadBase() {
+    const get = u => fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
+    Promise.all([get('geo/land.json'), get('geo/roads.json'), get('geo/places.json')]).then(([land, roads, places]) => {
+      const opt = { renderer: baseR, pane: 'base', interactive: false };
+      base.land = L.polygon(land.rings.map(dec), Object.assign({ stroke: false, fillColor: C.land, fillOpacity: 1, smoothFactor: 0.7 }, opt)).addTo(map);
+      const line = (arr) => L.polyline(arr.map(dec), Object.assign({ lineCap: 'round', lineJoin: 'round', smoothFactor: 0.8 }, opt));
+      base.prCase = line(roads.primary).addTo(map);
+      base.trCase = line(roads.trunk).addTo(map);
+      base.mwCase = line(roads.motorway).addTo(map);
+      base.pr = line(roads.primary).addTo(map);
+      base.tr = line(roads.trunk).addTo(map);
+      base.mw = line(roads.motorway).addTo(map);
+      const ring = [[BOX.S, BOX.W], [BOX.N, BOX.W], [BOX.N, BOX.E], [BOX.S, BOX.E]];
+      base.mask = L.polygon([[[-80, -179], [80, -179], [80, 179], [-80, 179]], ring],
+                            Object.assign({ stroke: false, fillColor: C.mask, fillOpacity: 1 }, opt)).addTo(map);
+      base.edge = L.polygon(ring, Object.assign({ fill: false, color: C.edge, weight: 1, dashArray: '4 5' }, opt)).addTo(map);
+      roadStyle();
+
+      PLACES = places.map(([name, rank, lng, lat]) => ({ name, rank, lat, lng }));
+      for (const s of STORES) {
+        let best = null, bd = Infinity;
+        for (const p of PLACES) { if (p.rank < 2) continue; const d = km(s, p); if (d < bd) { bd = d; best = p; } }
+        if (best && bd < 2.5) { s.area = best.name; continue; }
+        best = null; bd = Infinity;
+        for (const p of PLACES) { if (p.rank > 1) continue; const d = km(s, p); if (d < bd) { bd = d; best = p; } }
+        s.area = best && bd < 15 ? best.name : EMIRATES[s.em];
+      }
+      nearInput.disabled = false;
+      nearInput.placeholder = 'Pick an area, e.g. Dubai Marina';
+      $('#mstatus').hidden = true;
+      render();
+      if (state.sel) renderDetail();
+      updateLabels();
+    }).catch(() => {
+      $('#mstatus').textContent = 'The base map didn’t load. Store pins and the list still work.';
+      nearInput.placeholder = 'Areas unavailable';
+    });
+  }
+
+  /* ---------------- start ---------------- */
+  buildControls();
+  render();
+  if (isSheet()) { measurePeek(); setSheet('peek'); }
+  map.invalidateSize();
+  fitPoints(STORES.map(s => [s.lat, s.lng]), false);
+  try {
+    const saved = JSON.parse(store.get('allday-map-origin') || 'null');
+    if (saved && typeof saved.name === 'string' && isFinite(saved.lat) && isFinite(saved.lng)) setOrigin(saved, false);
+  } catch (e) {}
+  loadBase();
+  const fromHash = BY_ID.get(location.hash.slice(1));
+  if (fromHash) select(fromHash);
+})();
+</script>
+
+</body>
+</html>
